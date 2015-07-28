@@ -98,7 +98,6 @@ describe('', function() {
         // res comes from the request module, and may not follow express conventions
         expect(res.statusCode).to.equal(404);
         done();
-        // console.log('---------------> test passed');
       });
     });
 
@@ -166,8 +165,6 @@ describe('', function() {
       var link;
 
       beforeEach(function(done){
-        // console.log('link -------------> here');
-        // save a link to the database
         link = new Link({
           url: 'http://roflzoo.com/',
           title: 'Funny animal pictures, funny animals, funniest dogs',
@@ -225,9 +222,9 @@ describe('', function() {
 
   }); // 'Link creation'
 
-  describe('Privileged Access:', function(){
+  xdescribe('Privileged Access:', function(){
 
-    it('Redirects to login page if a user tries to access the main page and is not signed in', function(done) {
+    xit('Redirects to login page if a user tries to access the main page and is not signed in', function(done) {
       request('http://127.0.0.1:4568/', function(error, res, body) {
         expect(res.req.path).to.equal('/login');
         done();
@@ -252,7 +249,7 @@ describe('', function() {
 
   xdescribe('Account Creation:', function(){
 
-    it('Signup creates a user record', function(done) {
+    xit('Signup creates a user record', function(done) {
       var options = {
         'method': 'POST',
         'uri': 'http://127.0.0.1:4568/signup',
@@ -280,7 +277,7 @@ describe('', function() {
       });
     });
 
-    it('Signup logs in a new user', function(done) {
+    xit('Signup logs in a new user', function(done) {
       var options = {
         'method': 'POST',
         'uri': 'http://127.0.0.1:4568/signup',

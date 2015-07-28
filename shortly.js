@@ -20,27 +20,19 @@ app.set('view engine', 'ejs');
 
 
 app.use(partials());
-// Parse JSON (uniform resource locators)
-
-// Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 // app.use(cookieParser());
 app.use(session({
   secret: 'keyboard cat'
-  // resave: false,
-  // saveUninitialized: true,
-  // cookie: { secure: true }
 }));
 app.use(bodyParser.json());
 
 var sess;
 
 app.get('/', function(req, res){
-  // console.log(req);
   sess = req.session;
-  //console.log(sess.username);
-  // console.log(req.session);
+  // console.log('session --------> ', req.session);
   if(sess.username){
     res.render('index'); 
   }
@@ -48,11 +40,6 @@ app.get('/', function(req, res){
     res.redirect('login');
   }
 });
-
-// app.get('/home',
-// function(req, res) {
-//   res.render('index');
-// });
 
 app.get('/create', 
 function(req, res) {
@@ -119,61 +106,59 @@ app.post('/signup',
   function(req, res){
     sess = req.session;
     sess.username = req.body.username;
-    //encrypt this without storing it in plain text
     sess.password = req.body.password;//TO DELETE LATER
-
     User.forge({
       username: sess.username,
-      //again, make sure this is encrypted by this point
-      //check the db model to see if there are helper functions
-      // bcrypt ????
       password: sess.password
-    }).save().then(function(){
+    }).save().then(function(results){
+      console.log('RESULTS ---------> ', results);
       db.knex('users')
         .where('username', '=', sess.username)
         .then(function(results){
-          console.log("----------> RESULTS: ", results);
         });
-        console.log("-----------> REDIRECTING TO HOME");
         res.redirect("/");
-    });
+    }); 
   });
 
 app.post('/login', 
 function(req, res) {
   sess = req.session;
-  sess.username = req.body.username;
-  //this is where we should encrypt the password
-  //don't store it on the session
-  //just pass the encrypted password along to the database query without saving it
-  sess.password = req.body.password;
 
-  db.knex('users')
-    .where('username', '=', sess.username)
-    .then(function(results){
-      console.log("-------------> LOGIN RESULTS: ", results);
-      if (results[0] && results[0]['username']){
-        // the user is in the database
-        var password = results[0]['password'];
+  new User({username: req.body.username}).fetch().then(function(result){
+    // console.log(result);
+    if (!result) {
+      res.redirect('/signup');
+    }else{
+    
 
-        // check if the password is correct
-        if (password === sess.password){
+    result.comparePassword(req.body.password, function(isMatch) {
+      if (isMatch) {
+
+        // if found a match, regenerate the session
+        req.session.regenerate(function(err) {
+          req.session.username = req.body.username;
           res.redirect("/");
-        } else {
-          console.log("-----------------> WRONG PASSWORD");
-          res.send("Wrong password");
-        }
-        console.log("-----------------> THE PASSWORD", password);
+        });
+        
       } else {
-        // user not in database, redirect to signup
-        console.log("-----------------> REDIRECTING TO SIGNUP");
-        res.redirect('/signup');
+        // res.send("Wrong password");
+        res.redirect('/login');
       }
     });
-  // check if username is in the database, if it is check password
-  // if username not in database, reroute to signup
-  //res.redirect('/');
+    }
+  });
 });
+
+app.get('/logout', function(req, res){
+  // console.log('session -------> ', req.session);
+  req.session.destroy(function(err){
+    // console.log('session destroyed');
+    if(err) throw err;
+    else {
+      res.redirect('/login');
+    }
+  });
+})
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
