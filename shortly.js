@@ -1,8 +1,9 @@
 var express = require('express');
+var session = require('express-session');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+// var cookieParser = require('cookie-parser');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -15,22 +16,47 @@ var app = express();
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
+
+
+
 app.use(partials());
 // Parse JSON (uniform resource locators)
-app.use(bodyParser.json());
+
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
+// app.use(cookieParser());
+app.use(session({
+  secret: 'keyboard cat'
+  // resave: false,
+  // saveUninitialized: true,
+  // cookie: { secure: true }
+}));
+app.use(bodyParser.json());
 
+var sess;
 
-app.get('/', 
-function(req, res) {
-  res.render('index');
+app.get('/', function(req, res){
+  // console.log(req);
+  sess = req.session;
+  //console.log(sess.username);
+  // console.log(req.session);
+  if(sess.username){
+    res.render('index'); 
+  }
+  else{
+    res.redirect('login');
+  }
 });
+
+// app.get('/home',
+// function(req, res) {
+//   res.render('index');
+// });
 
 app.get('/create', 
 function(req, res) {
-  res.render('index');
+  res.render('signup');
 });
 
 app.get('/links', 
@@ -74,11 +100,67 @@ function(req, res) {
   });
 });
 
+
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
 
+app.get('/login', 
+function(req, res) {
+  res.render('login');
+});
 
+app.get('/signup', 
+function(req, res) {
+  res.render('signup');
+});
+
+app.post('/signup', 
+  function(req, res){
+    sess = req.session;
+    sess.username = req.body.username;
+    sess.password = req.body.password;//TO DELETE LATER
+    
+    User.forge({
+      username: sess.username,
+      password: sess.password
+    }).save().then(function(){
+      db.knex('users')
+        .where('username', '=', sess.username)
+        .then(function(results){
+          console.log("----------> RESULTS: ", results);
+        });
+        console.log("-----------> REDIRECTING TO HOME");
+        res.redirect("/");
+    });
+  });
+
+app.post('/login', 
+function(req, res) {
+  sess = req.session;
+  sess.username = req.body.username;
+  sess.password = req.body.password;
+
+  db.knex('users')
+    .where('username', '=', sess.username)
+    .then(function(results){
+      console.log("-------------> LOGIN RESULTS: ", results);
+      if (results[0] && results[0]['username']){
+        // the user is in the database
+        var password = results[0]['password'];
+
+        // check if the password is correct
+        console.log("-----------------> THE PASSWORD", password);
+      } else {
+        // user not in database, redirect to signup
+        console.log("-----------------> REDIRECTING TO SIGNUP");
+        res.redirect('/signup');
+      }
+    });
+  // check if username is in the database, if it is check password
+  // if username not in database, reroute to signup
+  //res.redirect('/');
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
