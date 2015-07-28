@@ -119,10 +119,14 @@ app.post('/signup',
   function(req, res){
     sess = req.session;
     sess.username = req.body.username;
+    //encrypt this without storing it in plain text
     sess.password = req.body.password;//TO DELETE LATER
-    
+
     User.forge({
       username: sess.username,
+      //again, make sure this is encrypted by this point
+      //check the db model to see if there are helper functions
+      // bcrypt ????
       password: sess.password
     }).save().then(function(){
       db.knex('users')
@@ -139,6 +143,9 @@ app.post('/login',
 function(req, res) {
   sess = req.session;
   sess.username = req.body.username;
+  //this is where we should encrypt the password
+  //don't store it on the session
+  //just pass the encrypted password along to the database query without saving it
   sess.password = req.body.password;
 
   db.knex('users')
@@ -150,6 +157,12 @@ function(req, res) {
         var password = results[0]['password'];
 
         // check if the password is correct
+        if (password === sess.password){
+          res.redirect("/");
+        } else {
+          console.log("-----------------> WRONG PASSWORD");
+          res.send("Wrong password");
+        }
         console.log("-----------------> THE PASSWORD", password);
       } else {
         // user not in database, redirect to signup
